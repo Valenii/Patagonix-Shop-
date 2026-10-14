@@ -1,0 +1,87 @@
+rules_version = '2';
+
+// PATAGONIX SHOP - Firestore Security Rules
+// El frontend valida roles por UX, pero la seguridad real vive aca.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // Lee el perfil del usuario que hace la request para chequear su rol.
+    function isAdmin() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Checkout: un cliente solo puede BAJAR el stock (y updatedAt).
+    function isStockDecrease() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stock', 'updatedAt'])
+        && request.resource.data.stock is number
+        && request.resource.data.stock >= 0
+        && request.resource.data.stock < resource.data.stock;
+    }
+
+    // Review: sumar 1 a ratingCount y recalcular ratingAverage (0-5).
+    function isRatingUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ratingCount', 'ratingAverage'])
+        && request.resource.data.ratingCount == resource.data.get('ratingCount', 0) + 1
+        && request.resource.data.ratingAverage >= 0
+        && request.resource.data.ratingAverage <= 5;
+    }
+
+    // users: cada uno gestiona su perfil; el rol es inmutable desde el cliente
+    // y solo el email de bootstrap puede crearse como admin.
+    match /users/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow create: if isOwner(uid)
+        && request.resource.data.email is string
+        && (request.resource.data.role == 'customer'
+          || (request.resource.data.role == 'admin'
+            && request.auth.token.email == 'valentinaferrey162@gmail.com'));
+      allow update: if isOwner(uid)
+        && request.resource.data.role == resource.data.role;
+      allow delete: if false;
+    }
+
+    // products: lectura publica; admin edita todo, cliente solo stock/rating.
+    match /products/{productId} {
+      allow read: if true;
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (isSignedIn() && (isStockDecrease() || isRatingUpdate()));
+
+      match /reviews/{reviewId} {
+        allow read: if true;
+        allow create: if isSignedIn()
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.rating is int
+          && request.resource.data.rating >= 1
+          && request.resource.data.rating <= 5;
+        allow update, delete: if isOwner(resource.data.userId) || isAdmin();
+      }
+    }
+
+    // carts: carrito privado por usuario.
+    match /carts/{uid} {
+      allow read, write: if isOwner(uid);
+    }
+
+    // orders: el dueno crea y lee las suyas; solo admin cambia el estado.
+    match /orders/{orderId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.status == 'pending';
+      allow update: if isAdmin();
+      allow delete: if false;
+      allow list: if isSignedIn();
+    }
+  }
+}

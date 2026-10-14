@@ -4,6 +4,8 @@ SPA de e-commerce desarrollada para un cliente del sector retail de **Patagonix 
 
 **🌐 Producción:** `https://<COMPLETAR>.vercel.app`
 
+**📦 Repositorio:** https://github.com/Valenii/Patagonix-Shop-
+
 ---
 
 ## Índice
@@ -241,8 +243,8 @@ Los componentes **nunca importan Firebase directamente**: siempre pasan por un `
 
 ```bash
 # 1. Clonar e instalar dependencias
-git clone https://github.com/<COMPLETAR>/patagonix-shop.git
-cd patagonix-shop
+git clone https://github.com/Valenii/Patagonix-Shop-.git
+cd Patagonix-Shop-
 npm install
 
 # 2. Crear el archivo de variables y completarlo (ver sección siguiente)
@@ -373,8 +375,8 @@ La IA se usó como asistente para **planificar, revisar código, validar decisio
 | 4 | Validación de decisiones técnicas | Claude | Cómo descontar stock de forma segura al crear la orden. | Aprendí por qué conviene una **transacción** (`runTransaction`): que la orden y los descuentos sean todo o nada, que no se venda sin stock si dos personas compran a la vez, y que en una transacción las lecturas van antes que las escrituras. | Reescribir `createOrder` con transacción que valida stock y toma nombre y precio vigentes del producto. |
 | 5 | Generación de tests | Claude | Generar tests de integración del flujo de compra y casos edge del checkout. | Cómo armar un test de integración con los providers reales mockeando solo la capa de servicios, y qué casos edge cubrir: sin stock, producto eliminado, varios productos con uno sin stock, formulario inválido. | Agregar `checkoutFlow.test.tsx` (3 tests) y `orderService.test.ts` (5 tests). Total: 56 tests. |
 | 6 | Explicación de conceptos | Claude | Explicar qué es exactamente el snapshot en las órdenes y si significa "copiar cada compra". | Diferencia entre la orden (el registro de la compra) y el snapshot (la copia de los datos del producto **dentro** de la orden). | Usar la analogía del ticket de supermercado en la presentación. |
-| 7 | _COMPLETAR_ | | _Ej: planificación inicial de la arquitectura por features_ | | |
-| 8 | _COMPLETAR_ | | _Ej: presigned URLs, CORS del bucket o permisos IAM_ | | |
+| 7 | Validación de flujos de negocio / tests | Claude | Por qué el formulario de envío rechazaba mi código postal, y si era obligatorio pedir dirección en un checkout simulado. | La consigna no exige datos de envío, pero le dan sentido al seguimiento de estados de la orden. Aprendí los dos formatos de código postal argentino (4 dígitos y CPA `M5500ABC`): mi validación `^\d{4,8}$` rechazaba CPAs válidos. | Mantener el formulario, mover la validación a `checkout/utils/shippingValidation.ts`, aceptar ambos formatos, normalizar a mayúsculas y agregar tests de casos válidos e inválidos. |
+| 8 | Resolución de problemas | Claude | Al confirmar una compra solo veía "No se pudo crear la orden. Intenta nuevamente." | El `catch` ocultaba el error real. Al loguearlo apareció `permission-denied`: las reglas **publicadas** en Firebase eran una versión vieja, distinta de mi `firestore.rules` local (el fix de la entrada #3 nunca se había desplegado). | Loguear el error original en `createOrder` y mostrar un mensaje específico para permisos. Republicar las reglas y desplegarlas con `firebase deploy --only firestore:rules` para que local y producción no se desincronicen. |
 
 ### Reflexión
 

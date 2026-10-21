@@ -2,7 +2,7 @@
 
 SPA de e-commerce desarrollada para un cliente del sector retail de **Patagonix Tech**. Los clientes pueden navegar el catálogo, armar su carrito y comprar. Los administradores gestionan productos y órdenes desde un panel protegido.
 
-**🌐 Producción:** `https://<COMPLETAR>.vercel.app`
+**🌐 Producción:** https://patagonix-shop.vercel.app
 
 **📦 Repositorio:** https://github.com/Valenii/Patagonix-Shop-
 

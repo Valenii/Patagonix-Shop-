@@ -16,7 +16,9 @@ import { createRemoteJWKSet, jwtVerify } from 'jose';
  * que la verificacion de acceso la hacen las propias Firestore Security Rules.
  */
 
-const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID ?? process.env.VITE_FIREBASE_PROJECT_ID;
+// `||` (no `??`): si FIREBASE_PROJECT_ID esta definida pero vacia (como en
+// .env.example), igual cae al project ID del frontend.
+const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || process.env.VITE_FIREBASE_PROJECT_ID;
 
 const JWKS_URL = 'https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com';
 

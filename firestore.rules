@@ -81,7 +81,8 @@ service cloud.firestore {
         && request.resource.data.status == 'pending';
       allow update: if isAdmin();
       allow delete: if false;
-      allow list: if isSignedIn();
+      // Sin `allow list` extra: el `read` de arriba ya cubre las queries
+      // `where('userId', '==', uid)` del cliente y el listado completo del admin.
     }
   }
 }

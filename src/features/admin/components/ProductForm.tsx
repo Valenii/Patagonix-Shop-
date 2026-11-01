@@ -22,7 +22,9 @@ interface FormErrors {
 
 const CATEGORY_OPTIONS = PRODUCT_CATEGORIES.map((category) => ({ value: category, label: category }));
 
-function validate(values: Omit<ProductInput, 'category'>): FormErrors {
+type FieldName = keyof FormErrors;
+
+function validateProduct(values: Omit<ProductInput, 'category'>): FormErrors {
   const errors: FormErrors = {};
   if (values.name.trim().length < 3) errors.name = 'El nombre debe tener al menos 3 caracteres.';
   if (values.description.trim().length < 10) errors.description = 'Describe el producto con al menos 10 caracteres.';
@@ -41,35 +43,56 @@ export function ProductForm({ initialProduct, isSubmitting, onSubmit }: ProductF
   const [category, setCategory] = useState<ProductCategory>(initialProduct?.category ?? 'accesorios');
   const [imageUrl, setImageUrl] = useState(initialProduct?.imageUrl ?? '');
   const [imageKey, setImageKey] = useState(initialProduct?.imageKey ?? '');
-  const [errors, setErrors] = useState<FormErrors>({});
+  // Validacion en tiempo real: los errores se recalculan en cada render, pero
+  // solo se muestran para los campos que el usuario ya toco (o todos tras submit).
+  const [touched, setTouched] = useState<Set<FieldName>>(new Set());
+  const [submitted, setSubmitted] = useState(false);
+
+  const values = { name: name.trim(), description: description.trim(), price, stock, imageUrl };
+  const allErrors = validateProduct(values);
+  const errors: FormErrors = Object.fromEntries(
+    Object.entries(allErrors).filter(([field]) => submitted || touched.has(field as FieldName)),
+  );
+
+  const touch = (field: FieldName) =>
+    setTouched((prev) => (prev.has(field) ? prev : new Set(prev).add(field)));
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
-    const values = { name: name.trim(), description: description.trim(), price, stock, imageUrl };
-    const validationErrors = validate(values);
-    setErrors(validationErrors);
-    if (Object.keys(validationErrors).length > 0) return;
+    setSubmitted(true);
+    if (Object.keys(allErrors).length > 0) return;
 
     onSubmit({ ...values, category, imageKey: imageKey || undefined });
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
       <ImageUploader
         imageUrl={imageUrl}
         onUploaded={({ publicUrl, key }) => {
           setImageUrl(publicUrl);
           setImageKey(key);
-          setErrors((prev) => ({ ...prev, imageUrl: undefined }));
+          touch('imageUrl');
         }}
       />
       {errors.imageUrl && <p className="text-xs text-red-600">{errors.imageUrl}</p>}
 
-      <Input label="Nombre" value={name} onChange={(e) => setName(e.target.value)} error={errors.name} />
+      <Input
+        label="Nombre"
+        value={name}
+        onChange={(e) => {
+          setName(e.target.value);
+          touch('name');
+        }}
+        error={errors.name}
+      />
       <TextArea
         label="Descripcion"
         value={description}
-        onChange={(e) => setDescription(e.target.value)}
+        onChange={(e) => {
+          setDescription(e.target.value);
+          touch('description');
+        }}
         error={errors.description}
       />
       <div className="grid grid-cols-2 gap-3">
@@ -78,7 +101,10 @@ export function ProductForm({ initialProduct, isSubmitting, onSubmit }: ProductF
           type="number"
           min={0}
           value={price}
-          onChange={(e) => setPrice(Number(e.target.value))}
+          onChange={(e) => {
+            setPrice(Number(e.target.value));
+            touch('price');
+          }}
           error={errors.price}
         />
         <Input
@@ -86,7 +112,10 @@ export function ProductForm({ initialProduct, isSubmitting, onSubmit }: ProductF
           type="number"
           min={0}
           value={stock}
-          onChange={(e) => setStock(Number(e.target.value))}
+          onChange={(e) => {
+            setStock(Number(e.target.value));
+            touch('stock');
+          }}
           error={errors.stock}
         />
       </div>

@@ -51,11 +51,7 @@ export function AdminProductsPage() {
     if (!profile) return;
     setIsSubmitting(true);
 
-    // Si se reemplazo la imagen al editar, borramos la anterior de S3.
-    if (editingProduct?.imageKey && editingProduct.imageKey !== input.imageKey) {
-      void deleteProductImage(editingProduct.imageKey);
-    }
-
+    // Se guarda primero el imageUrl en Firestore...
     const result = editingProduct
       ? await updateProduct(editingProduct.id, input)
       : await createProduct(input, profile.uid);
@@ -63,6 +59,11 @@ export function AdminProductsPage() {
     setIsSubmitting(false);
 
     if (result.ok) {
+      // ...y recien con el guardado confirmado se borra de S3 la imagen reemplazada,
+      // asi un error al guardar nunca deja al producto apuntando a una imagen borrada.
+      if (editingProduct?.imageKey && editingProduct.imageKey !== input.imageKey) {
+        void deleteProductImage(editingProduct.imageKey);
+      }
       setIsModalOpen(false);
       loadProducts();
     } else {

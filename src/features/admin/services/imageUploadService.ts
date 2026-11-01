@@ -36,6 +36,10 @@ export async function uploadProductImage(file: File): Promise<Result<{ publicUrl
 
     if (!presignResponse.ok) {
       const body = (await presignResponse.json().catch(() => ({}))) as { error?: string };
+      if (!body.error && presignResponse.status === 404) {
+        // Pasa al correr solo `npm run dev`: Vite no levanta las funciones de /api.
+        return { ok: false, error: 'La API de subida no esta disponible. Usa `npx vercel dev` en local.' };
+      }
       return { ok: false, error: body.error ?? 'No se pudo preparar la subida de la imagen.' };
     }
 
